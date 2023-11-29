@@ -1,0 +1,50 @@
+version: '3.9'
+
+services:
+  robowars:
+    build:
+      dockerfile: ./Robowars/Dockerfile
+      context: .
+    restart: on-failure
+    command: echo "TODO"
+    enviroment:
+      - DB-URI: "mongodb://mongobd:27018"
+    expose:
+      - 11621:11621
+    volumes:
+      - ./Robowars/app.log:/app/app.log
+    depends_on:
+      mongodb:
+        condition: service_healthy
+    
+  nginx:
+    image: nginx:latest
+    ports:
+      - '16120:16120'
+    restart: always
+    volumes:
+      - ./volumes/nginx/nginx.conf:/etc/nginx/conf.d/default.conf
+      - ./volumes/nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./volumes/nginx/sites-enabled:/etc/nginx/sites-enabled:ro
+      - ./volumes/nginx/ssl:/etc/nginx/ssl:ro
+      - ./volumes/nginx/var/www/:/var/www/
+    depends_on:
+      robowars:
+        condition: service_started
+
+  mongodb:
+    image: mongodb/mongodb-community-server:6.0-ubi8
+    environment:
+      - MONGO_INITDB_ROOT_USERNAME=admin
+      - MONGO_INITDB_ROOT_PASSWORD=pass
+    volumes:
+      - ./volumes/data:/data/db
+    expose:
+      - 27018:27018
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongo mongo:27017/main --quiet
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 10s
+
