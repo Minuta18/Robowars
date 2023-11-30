@@ -1,2 +1,5 @@
-class ModelExists(BaseException):
+class AlreadyExistsException(BaseException):
+    pass
+
+class NotFoundException(BaseException):
     pass
