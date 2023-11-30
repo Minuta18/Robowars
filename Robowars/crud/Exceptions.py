@@ -1,0 +1,2 @@
+class ModelExists(BaseException):
+    pass
