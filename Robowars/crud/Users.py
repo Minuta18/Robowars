@@ -1,46 +1,40 @@
 from motor import motor_asyncio as motor
+import pydantic
 import crud
-import passlib
+import typing
+import bson
 
-crypt_context = passlib.context.CryptContext(schemes=["bcrypt"], deprecated="auto")
+class User(pydantic.BaseModel):
+    id: typing.Optional[crud.PyObjectId] = pydantic.Field(alias='_id', default=None)
+    username: str = pydantic.Field(...)
+    email: str = pydantic.Field(...)
+    hashed_password: str = pydantic.Field(...)
 
-class User:
-    def __init__(self, *, username: str, password: str, email: str=None):
-        self.username = username
-        self.password = self._get_password_hash(password)
-        self.email = email
-        
-    # @staticmethod TODO
-    # async def find_user(self, username)
-        
-    @staticmethod
-    async def authenticate(self, login: str, password: str, session: motor.AsyncIOMotorClientSession) -> crud.Users.User|None:
-        async with session.start_transaction() as transaction:
-            users = crud.db.get_collection('users').find({'username': login}).to_list()
-            if len(users) == 0:
-                users = crud.db.get_collection('users').find({'emial': login}).to_list()
-                if len(users) == 0:
-                    return None
-            usr = users[0]
-            
-        
-    def _get_password_hash(self, password: str) -> str:
-        return crypt_context.hash(password)
-    
-    def _verify_password(self, hashed_password: str, plain_password: str) -> bool:
-        return crypt_context.verify(plain_password, hashed_password)
-        
-    def __dict__(self):
-        return {
-            'username': self.username,
-            'password': self.password,
-        }
+async def create_user(*, user: User):
+    '''
+    Creates a new user
+    '''
+    new_user = await crud.user_collection.insert_one(
+        user.model_dump(by_alias=True, exclude=['id'])
+    )
+    created_user = await crud.user_collection.find_one({
+        '_id': new_user.inserted_id,    
+    })
+    return created_user
 
-async def create_user(
-        user: dict, 
-        session: motor.AsyncIOMotorClientSession
-    ):    
-    async with session.start_transaction(): 
-        if crud.user_collection.count_documents({'username': user.username}) > 0:
-            raise crud.Exceptions.AlreadyExistsException(f'User with username "{user.username}" already exists')
-        await crud.user_collection.insert_one()
+async def get_users(*, start_index: int, page_size: int): # TODO
+    '''
+    Returns multiple users
+    '''
+    return await crud.user_collection.find().to_list()
+
+async def get_user(*, id: str):
+    '''
+    Retruns single user
+    '''
+    return await crud.user_collection.find_one({'_id': bson.ObjectId(id)})
+
+async def update_user(*, id: str, new_user: User):
+    '''
+    Edits user 
+    ''' # TODO
